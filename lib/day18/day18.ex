@@ -1,5 +1,5 @@
 defmodule Aoc2020.Day18 do
-  def read(file) do
+  def task2(file) do
     file
     |> File.stream!([], :line)
     |> Enum.map(&String.trim/1)
@@ -12,6 +12,7 @@ defmodule Aoc2020.Day18 do
     |> String.replace(" ", "")
     |> String.graphemes()
     |> process()
+    |> apply()
   end
 
   def split_by_closing_bracket([")" | rest], acc, 1) do
@@ -32,12 +33,32 @@ defmodule Aoc2020.Day18 do
     f(arg, rest)
   end
 
+  def apply({arg1, arg2, op}) when is_integer(arg1) and is_integer(arg2) do
+    calc(arg1, arg2, op)
+  end
+
+  def apply({arg1, arg2, op}) when is_integer(arg1) do
+    calc(arg1, apply(arg2), op)
+  end
+
+  def apply({arg1, arg2, op}) when is_integer(arg2) do
+    calc(apply(arg1), arg2, op)
+  end
+
+  def apply({arg1, arg2, op}) do
+    calc(apply(arg1), apply(arg2), op)
+  end
+
   def f(arg1, []), do: arg1
 
   def f(arg1, rest) do
     [op | rest_after_op] = rest
     {arg2, rest_after_arg2} = pick_argument(rest_after_op)
-    f(calc(arg1, arg2, op), rest_after_arg2)
+
+    case op do
+      "*" -> {arg1, f(arg2, rest_after_arg2), op}
+      "+" -> f({arg1, arg2, op}, rest_after_arg2)
+    end
   end
 
   def calc(arg1, arg2, "+"), do: arg1 + arg2
