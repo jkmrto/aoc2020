@@ -36,11 +36,12 @@ defmodule Aoc2020.Day19 do
     {pending_rules, msgs} = read(file)
     result = run(pending_rules, %{})
 
-    Enum.filter(msgs, fn msg -> msg in result end)
+    msgs
+    |> Enum.filter(&(&1 in result))
     |> Enum.count()
   end
 
-  def run(%{}, %{0 => result}), do: result
+  def run(%{}, %{0 => result}), do: MapSet.new(result)
 
   def run(pending_rules, resolved_rules) do
     {id, value} =
@@ -60,14 +61,21 @@ defmodule Aoc2020.Day19 do
   end
 
   def retrieve_rule([{rule_id, rule_combs} | rest], resolved_rules) do
-    if is_resolvable?(rule_combs, Map.keys(resolved_rules)) do
-      {rule_id, develop_rules(rule_combs, resolved_rules)}
-    else
-      retrieve_rule(rest, resolved_rules)
+    cond do
+      is_resolvable?(rule_combs, resolved_rules) ->
+        {rule_id, develop_rules(rule_combs, resolved_rules)}
+
+      true ->
+        retrieve_rule(rest, resolved_rules)
     end
   end
 
+  def is_recursive_resolvable?() do
+  end
+
   def is_resolvable?(rule_combs, resolved_rules) do
+    resolved_rules = Map.keys(resolved_rules)
+
     rule_combs
     |> Enum.flat_map(& &1)
     |> Enum.all?(fn v -> v in resolved_rules end)
@@ -80,9 +88,7 @@ defmodule Aoc2020.Day19 do
     end)
   end
 
-  def combinations([v1]) do
-    v1
-  end
+  def combinations([v1]), do: v1
 
   def combinations([l1, l2]) do
     for e1 <- l1, e2 <- l2, do: e1 <> e2
