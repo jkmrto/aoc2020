@@ -35,30 +35,52 @@ defmodule Aoc2020.Day21 do
 
   def task1(file) do
     foods = read(file)
-    allergenes = get_all_allergenes(foods)
-    allergene_ingredients = run(allergenes, foods)
+
+    ingredients_with_allergene =
+      foods
+      |> get_all_allergenes()
+      |> run(foods)
+      |> Enum.map(&elem(&1, 1))
+      |> MapSet.new()
 
     Enum.reduce(foods, 0, fn {ingredients, _allergenes}, acc ->
-      acc + MapSet.size(MapSet.difference(ingredients, allergene_ingredients))
+      acc + MapSet.size(MapSet.difference(ingredients, ingredients_with_allergene))
     end)
   end
 
-  def run([allergene | tail], foods, {pending_allergenes, matched_ingredients} \\ {[], []}) do
-    common_ingredients =
-      allergene
-      |> get_foods_with_allergene(foods)
-      |> get_common_ingredients()
-      |> MapSet.difference(MapSet.new(matched_ingredients))
-      |> MapSet.to_list()
-      |> case do
-        [ingredient] -> run(tail, foods, {pending_allergenes, [ingredient | matched_ingredients]})
-        _ -> run(tail, foods, {[allergene | pending_allergenes], matched_ingredients})
-      end
+  def task2(file) do
+    foods = read(file)
+
+    foods
+    |> get_all_allergenes()
+    |> run(foods)
+    |> Enum.sort(&(elem(&1, 0) <= elem(&2, 0)))
+    |> Enum.map(&elem(&1, 1))
+    |> Enum.join(",")
   end
 
-  def run([], _foods, {[], match_ingredients}), do: MapSet.new(match_ingredients)
+  def run(allergenes, foods, acc \\ {[], []})
 
-  def run([], _foods, {pending_allergenes, match_ingredients}) do
-    run(pending_allergenes, _foods, {[], match_ingredients})
+  def run([allergene | tail], foods, {pending_allergenes, allergenes_ingredients}) do
+    already_matched_ingredients = allergenes_ingredients |> Enum.map(&elem(&1, 1)) |> MapSet.new()
+
+    allergene
+    |> get_foods_with_allergene(foods)
+    |> get_common_ingredients()
+    |> MapSet.difference(already_matched_ingredients)
+    |> MapSet.to_list()
+    |> case do
+      [ingredient] ->
+        run(tail, foods, {pending_allergenes, [{allergene, ingredient} | allergenes_ingredients]})
+
+      _ ->
+        run(tail, foods, {[allergene | pending_allergenes], allergenes_ingredients})
+    end
+  end
+
+  def run([], _foods, {[], allergenes_ingredients}), do: allergenes_ingredients
+
+  def run([], foods, {pending_allergenes, allergenes_ingredients}) do
+    run(pending_allergenes, foods, {[], allergenes_ingredients})
   end
 end
