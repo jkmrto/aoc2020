@@ -30,71 +30,42 @@ defmodule Aoc2020.Day19 do
       |> String.split(" ")
       |> Enum.map(&String.to_integer(&1))
     end)
-  end
-
-  def task1(file) do
-    {pending_rules, msgs} = read(file)
-    result = run(pending_rules, %{})
-
-    msgs
-    |> Enum.filter(&(&1 in result))
-    |> Enum.count()
-  end
-
-  def run(%{}, %{0 => result}), do: MapSet.new(result)
-
-  def run(pending_rules, resolved_rules) do
-    {id, value} =
-      pending_rules
-      |> Enum.into([])
-      |> retrieve_rule(resolved_rules)
-
-    run(
-      Map.drop(pending_rules, [id]),
-      Map.put(resolved_rules, id, value)
-    )
-  end
-
-  def retrieve_rule([{rule_id, [rule_value]} | _rest], _resolved)
-      when is_binary(rule_value) do
-    {rule_id, [rule_value]}
-  end
-
-  def retrieve_rule([{rule_id, rule_combs} | rest], resolved_rules) do
-    cond do
-      is_resolvable?(rule_combs, resolved_rules) ->
-        {rule_id, develop_rules(rule_combs, resolved_rules)}
-
-      true ->
-        retrieve_rule(rest, resolved_rules)
+    |> case do
+      [o1, o2] -> [{o1, o2}]
+      [o] when is_list(o) -> o
     end
   end
 
-  def is_recursive_resolvable?() do
+  def task1(file) do
+    {rules, msgs} = read(file)
+    run(rules, msgs)
   end
 
-  def is_resolvable?(rule_combs, resolved_rules) do
-    resolved_rules = Map.keys(resolved_rules)
+  def task2(file) do
+    {rules, msgs} = read(file)
 
-    rule_combs
-    |> Enum.flat_map(& &1)
-    |> Enum.all?(fn v -> v in resolved_rules end)
+    rules =
+      rules
+      |> Map.put(8, [{[42], [42, 8]}])
+      |> Map.put(11, [{[42, 31], [42, 11, 31]}])
+
+    run(rules, msgs)
   end
 
-  def develop_rules(rule_combs, rules) do
-    Enum.reduce(rule_combs, [], fn comb, acc ->
-      to_process = for rule <- comb, do: Map.get(rules, rule)
-      acc ++ combinations(to_process)
-    end)
+  def run(rules, msgs) do
+    msgs
+    |> Enum.map(&{&1, check(&1, Map.get(rules, 0), rules)})
+    |> Enum.filter(&(elem(&1, 1) == true))
+    |> Enum.count()
   end
 
-  def combinations([v1]), do: v1
+  def check(msg, [head | tail], rules) when is_integer(head),
+    do: check(msg, Map.get(rules, head) ++ tail, rules)
 
-  def combinations([l1, l2]) do
-    for e1 <- l1, e2 <- l2, do: e1 <> e2
-  end
+  def check(msg, [{p1, p2} | tail], rules),
+    do: check(msg, p1 ++ tail, rules) or check(msg, p2 ++ tail, rules)
 
-  def combinations([l1 | rest]) do
-    for e1 <- l1, e2 <- combinations(rest), do: e1 <> e2
-  end
+  def check(<<e, rest_msg::binary>>, [<<e>> | tl], rules), do: check(rest_msg, tl, rules)
+  def check(<<>>, [], _rules), do: true
+  def check(_, _, _), do: false
 end
